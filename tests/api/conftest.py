@@ -3,6 +3,7 @@ from pathlib import Path
 
 import fakeredis.aioredis
 import pytest
+import pytest_asyncio
 from fastapi import FastAPI
 from httpx import ASGITransport, AsyncClient
 
@@ -14,7 +15,7 @@ def tmp_download_dir(tmp_path: Path) -> Path:
     return download_dir
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def fake_redis() -> AsyncIterator[fakeredis.aioredis.FakeRedis]:
     client = fakeredis.aioredis.FakeRedis(decode_responses=True)
     try:
@@ -23,7 +24,7 @@ async def fake_redis() -> AsyncIterator[fakeredis.aioredis.FakeRedis]:
         await client.aclose()
 
 
-@pytest.fixture
+@pytest_asyncio.fixture
 async def async_client(app: FastAPI) -> AsyncIterator[AsyncClient]:
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as client:
