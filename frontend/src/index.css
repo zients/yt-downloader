@@ -1,9 +1,240 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
 body {
   margin: 0;
+  background: #101014;
+  color: #f4f4f5;
   font-family:
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
     sans-serif;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  min-height: 100vh;
+  padding: 32px 16px;
+}
+
+.app-main {
+  width: min(760px, 100%);
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.app-header {
+  margin-bottom: 28px;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.1;
+}
+
+.url-input {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 10px;
+  margin-bottom: 18px;
+}
+
+.url-input input {
+  min-width: 0;
+  padding: 14px 16px;
+  color: #f4f4f5;
+  background: #1c1c24;
+  border: 1px solid #32323d;
+  border-radius: 8px;
+  outline: none;
+}
+
+.url-input input:focus {
+  border-color: #7c8cff;
+  box-shadow: 0 0 0 3px rgba(124, 140, 255, 0.18);
+}
+
+.url-input input:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.url-input button,
+.error-banner button {
+  padding: 0 18px;
+  min-height: 48px;
+  color: #ffffff;
+  background: #3f7cff;
+  border: 0;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.url-input button:disabled,
+.format-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.panel,
+.error-banner {
+  margin-top: 16px;
+  padding: 18px;
+  background: #191920;
+  border: 1px solid #2f2f39;
+  border-radius: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.error-banner {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+  color: #ffb4aa;
+  border-color: rgba(255, 111, 97, 0.35);
+}
+
+.error-banner span {
+  min-width: 0;
+}
+
+.thumbnail {
+  display: block;
+  width: 100%;
+  max-height: 360px;
+  object-fit: cover;
+  margin-bottom: 14px;
+  border-radius: 8px;
+}
+
+.progress-copy h2,
+.ready-panel h2 {
+  margin: 0 0 8px;
+  font-size: 1.2rem;
+  overflow-wrap: anywhere;
+}
+
+.progress-copy p,
+.conversion p {
+  margin: 0 0 12px;
+  color: #b8b8c3;
+  overflow-wrap: anywhere;
+}
+
+.progress-bar {
+  width: 100%;
+  height: 9px;
+  overflow: hidden;
+  background: #2b2b35;
+  border-radius: 999px;
+}
+
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #3f7cff, #2dd4bf);
+  border-radius: inherit;
+  transition: width 180ms ease;
+}
+
+.format-selector {
+  display: grid;
+  gap: 18px;
+}
+
+.format-group h3 {
+  margin: 18px 0 10px;
+  font-size: 0.9rem;
+  color: #b8b8c3;
+  text-transform: uppercase;
+}
+
+.format-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: 10px;
+}
+
+.format-button {
+  display: grid;
+  gap: 4px;
+  min-height: 72px;
+  padding: 12px;
+  color: #f4f4f5;
+  background: #22222b;
+  border: 1px solid #373745;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.format-button.video:hover:not(:disabled) {
+  border-color: #2dd4bf;
+}
+
+.format-button.audio:hover:not(:disabled) {
+  border-color: #f59e0b;
+}
+
+.format-button span {
+  font-weight: 700;
+}
+
+.format-button small {
+  color: #b8b8c3;
+}
+
+.conversion.ready {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.download-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 16px;
+  color: #06130f;
+  font-weight: 700;
+  text-decoration: none;
+  background: #2dd4bf;
+  border-radius: 8px;
+  overflow-wrap: anywhere;
+  text-align: center;
+}
+
+.conversion.failed {
+  color: #ffb4aa;
+}
+
+@media (max-width: 560px) {
+  .app-shell {
+    padding: 20px 12px;
+  }
+
+  .url-input {
+    grid-template-columns: 1fr;
+  }
+
+  .conversion.ready,
+  .error-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
 }
