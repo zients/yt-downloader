@@ -6,7 +6,11 @@ from typing import Any
 from yt_downloader.config import settings
 from yt_downloader.models.schemas import AUDIO_FORMATS
 from yt_downloader.services.paths import safe_path_under
-from yt_downloader.services.redis_state import write_failure_state, write_hash_state
+from yt_downloader.services.redis_state import (
+    StatePersistenceError,
+    write_failure_state,
+    write_hash_state,
+)
 
 _conversion_semaphore = asyncio.Semaphore(settings.max_concurrent_conversions)
 
@@ -124,7 +128,7 @@ async def convert_file(
             _ttl_seconds(),
         )
     except Exception as exc:
-        await write_failure_state(
+        persisted = await write_failure_state(
             redis_client,
             conversion_key,
             {
@@ -134,3 +138,7 @@ async def convert_file(
             },
             _ttl_seconds(),
         )
+        if not persisted:
+            raise RuntimeError("Failed to persist conversion failure state") from exc
+        if isinstance(exc, StatePersistenceError):
+            raise RuntimeError("Failed to persist conversion state") from exc

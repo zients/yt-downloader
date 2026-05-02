@@ -27,7 +27,7 @@ class Settings(BaseSettings):
 
     redis_url: str = "redis://redis:6379/0"
     download_dir: Path = Path("/app/downloads")
-    file_ttl_hours: int = 24
+    file_ttl_hours: int = Field(default=24, gt=0)
     cleanup_interval_minutes: int = 60
     max_concurrent_conversions: int = Field(default=1, gt=0)
     video_presets: list[dict[str, str]] = Field(default_factory=_video_presets)

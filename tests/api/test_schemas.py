@@ -73,6 +73,10 @@ class TestSettings:
         with pytest.raises(ValidationError):
             Settings(_env_file=None, max_concurrent_conversions=0)
 
+    def test_rejects_zero_file_ttl_hours(self) -> None:
+        with pytest.raises(ValidationError):
+            Settings(_env_file=None, file_ttl_hours=0)
+
     def test_audio_presets_are_normalized_without_quality(self) -> None:
         settings = Settings(_env_file=None, audio_presets=[{"format": "mp3", "quality": None}])
 

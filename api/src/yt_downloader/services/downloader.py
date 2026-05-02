@@ -7,7 +7,11 @@ import yt_dlp
 
 from yt_downloader.config import settings
 from yt_downloader.services.paths import safe_path_under
-from yt_downloader.services.redis_state import write_failure_state, write_hash_state
+from yt_downloader.services.redis_state import (
+    StatePersistenceError,
+    write_failure_state,
+    write_hash_state,
+)
 
 
 def _ttl_seconds() -> int:
@@ -80,7 +84,7 @@ async def download_video(
             _ttl_seconds(),
         )
     except Exception as exc:
-        await write_failure_state(
+        persisted = await write_failure_state(
             redis_client,
             task_key,
             {
@@ -89,3 +93,7 @@ async def download_video(
             },
             _ttl_seconds(),
         )
+        if not persisted:
+            raise RuntimeError("Failed to persist task failure state") from exc
+        if isinstance(exc, StatePersistenceError):
+            raise RuntimeError("Failed to persist task state") from exc
