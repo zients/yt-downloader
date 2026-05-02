@@ -1,0 +1,53 @@
+services:
+  gateway:
+    build:
+      context: ./gateway
+    ports:
+      - "17291:80"
+    depends_on:
+      - frontend
+      - api
+    networks:
+      - frontend_net
+      - api_net
+
+  frontend:
+    build:
+      context: ./frontend
+    expose:
+      - "80"
+    networks:
+      - frontend_net
+
+  api:
+    build:
+      context: ./api
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      DOWNLOAD_DIR: /app/downloads
+      FILE_TTL_HOURS: "24"
+      CLEANUP_INTERVAL_MINUTES: "60"
+      MAX_CONCURRENT_CONVERSIONS: "1"
+    volumes:
+      - ./downloads:/app/downloads
+    expose:
+      - "8000"
+    depends_on:
+      - redis
+    networks:
+      - api_net
+      - data_net
+
+  redis:
+    image: redis:7.4-alpine
+    command: ["redis-server", "--appendonly", "no", "--save", ""]
+    expose:
+      - "6379"
+    networks:
+      - data_net
+
+networks:
+  frontend_net:
+  api_net:
+  data_net:
+    internal: true
