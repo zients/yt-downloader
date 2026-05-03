@@ -20,7 +20,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -74,7 +75,8 @@ input {
 
 .url-input button,
 .error-banner button,
-.job-card-header button {
+.job-card-header button,
+.download-button {
   padding: 0 18px;
   min-height: 48px;
   color: #ffffff;
@@ -85,7 +87,7 @@ input {
 }
 
 .url-input button:disabled,
-.format-button:disabled {
+.download-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -226,48 +228,40 @@ input {
 
 .format-selector {
   display: grid;
-  gap: 18px;
+  gap: 8px;
+  margin-bottom: 12px;
 }
 
-.format-group h3 {
-  margin: 18px 0 10px;
+.format-selector label {
   font-size: 0.9rem;
   color: #b8b8c3;
   text-transform: uppercase;
 }
 
-.format-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
-  gap: 10px;
-}
-
-.format-button {
-  display: grid;
-  gap: 4px;
-  min-height: 72px;
-  padding: 12px;
+.format-selector select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 12px;
   color: #f4f4f5;
   background: #22222b;
   border: 1px solid #373745;
   border-radius: 8px;
-  cursor: pointer;
+  outline: none;
 }
 
-.format-button.video:hover:not(:disabled) {
-  border-color: #2dd4bf;
+.format-selector select:focus {
+  border-color: #7c8cff;
+  box-shadow: 0 0 0 3px rgba(124, 140, 255, 0.18);
 }
 
-.format-button.audio:hover:not(:disabled) {
-  border-color: #f59e0b;
+.format-selector select:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
-.format-button span {
+.download-button {
+  width: 100%;
   font-weight: 700;
-}
-
-.format-button small {
-  color: #b8b8c3;
 }
 
 .conversion.ready {

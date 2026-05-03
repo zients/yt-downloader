@@ -1,6 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import { createConversion } from "../api/client";
+import {
+  findMatchingPreset,
+  flattenAvailablePresets,
+  getDefaultFormatPreset,
+} from "../formatPresets";
 import { useConversionPolling } from "../hooks/useConversionPolling";
 import { useTaskPolling } from "../hooks/useTaskPolling";
 import type { RecentJob } from "../recentJobs";
@@ -37,6 +42,9 @@ export function JobCard({
     string | null
   >(null);
   const [isCreatingConversion, setIsCreatingConversion] = useState(false);
+  const [selectedPreset, setSelectedPreset] = useState<FormatPreset | null>(
+    null,
+  );
   const { task, error: taskError } = useTaskPolling(job.taskId);
   const { conversion, error: conversionError } = useConversionPolling(
     job.conversionId,
@@ -66,12 +74,41 @@ export function JobCard({
     conversionCreateError ??
     conversionError ??
     (taskFailed ? currentTask?.error ?? "Source download failed" : null);
+  const outputPresets = currentTask?.output_presets ?? null;
+  const availablePresets = flattenAvailablePresets(outputPresets);
+  const selectedAvailablePreset = findMatchingPreset(
+    availablePresets,
+    selectedPreset,
+  );
+  const activeSelectedPreset =
+    selectedAvailablePreset ?? getDefaultFormatPreset(outputPresets);
 
-  async function handlePresetSelect(preset: FormatPreset) {
+  useEffect(() => {
+    if (!outputPresets) {
+      setSelectedPreset(null);
+      return;
+    }
+
+    const nextAvailablePresets = flattenAvailablePresets(outputPresets);
+
+    setSelectedPreset((currentSelectedPreset) => {
+      if (
+        currentSelectedPreset &&
+        findMatchingPreset(nextAvailablePresets, currentSelectedPreset)
+      ) {
+        return currentSelectedPreset;
+      }
+
+      return getDefaultFormatPreset(outputPresets);
+    });
+  }, [outputPresets]);
+
+  async function handleDownloadClick() {
     if (
       !currentTask ||
       currentTask.status !== "source_ready" ||
-      conversionProcessing
+      conversionProcessing ||
+      !activeSelectedPreset
     ) {
       return;
     }
@@ -82,8 +119,8 @@ export function JobCard({
     try {
       const createdConversion = await createConversion(
         currentTask.task_id,
-        preset.format,
-        preset.quality ?? null,
+        activeSelectedPreset.format,
+        activeSelectedPreset.quality ?? null,
       );
       onConversionCreated(currentTask.task_id, createdConversion.conversion_id);
     } catch (error) {
@@ -137,10 +174,19 @@ export function JobCard({
           {currentTask.output_presets ? (
             <FormatSelector
               disabled={conversionProcessing}
-              onSelect={handlePresetSelect}
+              onChange={setSelectedPreset}
               presets={currentTask.output_presets}
+              selectedPreset={activeSelectedPreset}
             />
           ) : null}
+          <button
+            className="download-button"
+            disabled={conversionProcessing || !activeSelectedPreset}
+            onClick={handleDownloadClick}
+            type="button"
+          >
+            Download
+          </button>
         </section>
       ) : null}
 
