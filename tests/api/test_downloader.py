@@ -210,7 +210,7 @@ async def test_download_video_sets_source_ready(fake_redis, tmp_download_dir: Pa
     task_id = "task-1"
     task_dir = tmp_download_dir / task_id
     task_dir.mkdir()
-    source_file = task_dir / "source.mp4"
+    source_file = task_dir / "video title.mp4"
     source_file.write_text("fake video")
 
     ydl_instance = MagicMock()
@@ -226,11 +226,13 @@ async def test_download_video_sets_source_ready(fake_redis, tmp_download_dir: Pa
         await download_video(task_id, "https://youtu.be/example", fake_redis, tmp_download_dir)
 
     data = await fake_redis.hgetall(f"task:{task_id}")
+    options = ydl_cls.call_args.args[0]
     assert data["status"] == "source_ready"
     assert data["title"] == "Example Video"
-    assert data["source_filename"] == "source.mp4"
+    assert data["source_filename"] == f"{task_id}.mp4"
     assert data["progress"] == "100"
     assert "output_presets" in data
+    assert options["outtmpl"] == str(task_dir / f"{task_id}.%(ext)s")
 
 
 @pytest.mark.asyncio

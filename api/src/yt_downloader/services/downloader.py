@@ -18,27 +18,29 @@ def _ttl_seconds() -> int:
     return settings.file_ttl_hours * 3600
 
 
-def _source_filename(info: dict[str, Any]) -> str:
+def _source_filename(info: dict[str, Any], task_id: str) -> str:
     requested_downloads = info.get("requested_downloads") or []
     if requested_downloads:
         filepath = requested_downloads[0].get("filepath")
         if filepath:
-            return Path(filepath).name
+            suffix = Path(filepath).suffix or ".mp4"
+            return f"{task_id}{suffix}"
 
     filename = info.get("_filename")
     if filename:
-        return Path(filename).name
+        suffix = Path(filename).suffix or ".mp4"
+        return f"{task_id}{suffix}"
 
-    return "source.mp4"
+    return f"{task_id}.mp4"
 
 
-def _download(url: str, task_dir: Path) -> dict[str, Any]:
+def _download(url: str, task_dir: Path, task_id: str) -> dict[str, Any]:
     task_dir.mkdir(parents=True, exist_ok=True)
     options = {
         "format": "bestvideo+bestaudio/best",
         "merge_output_format": "mp4",
         "noplaylist": True,
-        "outtmpl": str(task_dir / "source.%(ext)s"),
+        "outtmpl": str(task_dir / f"{task_id}.%(ext)s"),
         "quiet": True,
     }
     with yt_dlp.YoutubeDL(options) as ydl:
@@ -64,7 +66,7 @@ async def download_video(
             _ttl_seconds(),
         )
         task_dir = safe_path_under(download_dir, task_id)
-        info = await asyncio.to_thread(_download, url, task_dir)
+        info = await asyncio.to_thread(_download, url, task_dir, task_id)
         await write_hash_state(
             redis_client,
             task_key,
@@ -72,7 +74,7 @@ async def download_video(
                 "status": "source_ready",
                 "title": info.get("title") or "",
                 "thumbnail": info.get("thumbnail") or "",
-                "source_filename": _source_filename(info),
+                "source_filename": _source_filename(info, task_id),
                 "progress": 100,
                 "output_presets": json.dumps(
                     {

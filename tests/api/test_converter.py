@@ -230,7 +230,7 @@ async def test_convert_file_sets_conversion_ready(fake_redis, tmp_download_dir: 
     task_dir.mkdir()
     source = task_dir / "source.mp4"
     source.write_text("fake video")
-    expected_output = task_dir / "outputs" / conversion_id / "source.mp3"
+    expected_output = task_dir / "outputs" / conversion_id / f"{task_id}.mp3"
 
     with patch("yt_downloader.services.converter._run_ffmpeg") as run_ffmpeg:
         run_ffmpeg.return_value = expected_output
@@ -248,8 +248,9 @@ async def test_convert_file_sets_conversion_ready(fake_redis, tmp_download_dir: 
 
     data = await fake_redis.hgetall(f"conversion:{conversion_id}")
     assert data["status"] == "conversion_ready"
-    assert data["output_filename"] == "source.mp3"
+    assert data["output_filename"] == f"{task_id}.mp3"
     assert data["download_url"] == f"/api/conversions/{conversion_id}/download"
+    run_ffmpeg.assert_called_once_with(source, expected_output, "mp3", None)
 
 
 @pytest.mark.asyncio

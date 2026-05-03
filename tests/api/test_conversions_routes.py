@@ -356,14 +356,14 @@ async def test_download_ready_conversion(
     conversion_id = "conv-1"
     output_dir = tmp_download_dir / task_id / "outputs" / conversion_id
     output_dir.mkdir(parents=True)
-    output_file = output_dir / "source.mp3"
+    output_file = output_dir / f"{task_id}.mp3"
     output_file.write_bytes(b"fake audio")
     await fake_redis.hset(
         f"conversion:{conversion_id}",
         mapping={
             "status": "conversion_ready",
             "task_id": task_id,
-            "output_filename": "source.mp3",
+            "output_filename": f"{task_id}.mp3",
         },
     )
 

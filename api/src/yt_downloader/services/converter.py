@@ -104,7 +104,7 @@ async def convert_file(
             task_id,
             "outputs",
             conversion_id,
-            f"{source_path.stem}.{target_format}",
+            f"{task_id}.{target_format}",
         )
         async with _conversion_semaphore:
             output_path = await asyncio.to_thread(
