@@ -291,10 +291,11 @@ Stop the stack and remove the downloads directory:
 
 ```bash
 docker compose down
-rm -rf downloads
+rm -rf ./downloads
 ```
 
-The directory will be recreated when the API runs again.
+`./downloads` is the host directory mounted into the API container as
+`/app/downloads`. The directory will be recreated when the API runs again.
 
 ## Security Notes
 
