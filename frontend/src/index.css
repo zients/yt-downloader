@@ -128,9 +128,12 @@ select {
 }
 
 .job-card-header button {
+  flex: 0 0 auto;
   min-height: 40px;
   padding: 0 14px;
   background: #2d2d37;
+  overflow-wrap: normal;
+  white-space: nowrap;
 }
 
 .job-card-header button:hover {
