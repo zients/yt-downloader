@@ -76,7 +76,7 @@ select {
 .url-input button,
 .error-banner button,
 .job-card-header button,
-.download-button {
+.convert-button {
   padding: 0 18px;
   min-height: 48px;
   color: #ffffff;
@@ -87,7 +87,7 @@ select {
 }
 
 .url-input button:disabled,
-.download-button:disabled {
+.convert-button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
 }
@@ -259,7 +259,7 @@ select {
   opacity: 0.55;
 }
 
-.download-button {
+.convert-button {
   width: 100%;
   font-weight: 700;
 }

@@ -103,7 +103,7 @@ export function JobCard({
     });
   }, [outputPresets]);
 
-  async function handleDownloadClick() {
+  async function handleConvertClick() {
     if (
       !currentTask ||
       currentTask.status !== "source_ready" ||
@@ -180,12 +180,12 @@ export function JobCard({
             />
           ) : null}
           <button
-            className="download-button"
+            className="convert-button"
             disabled={conversionProcessing || !activeSelectedPreset}
-            onClick={handleDownloadClick}
+            onClick={handleConvertClick}
             type="button"
           >
-            Download
+            Convert
           </button>
         </section>
       ) : null}
