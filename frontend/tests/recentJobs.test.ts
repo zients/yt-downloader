@@ -1,6 +1,7 @@
 import {
   addRecentJob,
   hydrateRecentJobs,
+  isExpiredRecentJobError,
   markRecentJobAutoDownloaded,
   RECENT_JOBS_LIMIT,
   updateRecentJobConversion,
@@ -223,11 +224,40 @@ function testHydrateRecentJobsFiltersInvalidAndLimits() {
   assert(jobs.every((job) => job.taskId !== ""), "filters empty task ids");
 }
 
+function testExpiredRecentJobErrorMatchesOnlyMissingBackendState() {
+  assertEqual(
+    isExpiredRecentJobError("Task not found"),
+    true,
+    "matches expired task state",
+  );
+  assertEqual(
+    isExpiredRecentJobError("Conversion not found"),
+    true,
+    "matches expired conversion state",
+  );
+  assertEqual(
+    isExpiredRecentJobError("Failed to fetch task status"),
+    false,
+    "does not match network errors",
+  );
+  assertEqual(
+    isExpiredRecentJobError("Request failed with status 500"),
+    false,
+    "does not match non-expiration server errors",
+  );
+  assertEqual(
+    isExpiredRecentJobError(null),
+    false,
+    "does not match empty errors",
+  );
+}
+
 testAddRecentJobPrependsAndTrims();
 testAddRecentJobDeduplicatesTaskId();
 testUpdateRecentJobConversionChangesOneCard();
 testUpdateRecentJobConversionClearsStaleAutoDownloadMarker();
 testMarkRecentJobAutoDownloadedStoresConversionId();
 testHydrateRecentJobsFiltersInvalidAndLimits();
+testExpiredRecentJobErrorMatchesOnlyMissingBackendState();
 
 console.log("recentJobs tests passed");

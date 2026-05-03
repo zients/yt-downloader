@@ -9,7 +9,7 @@ import {
 } from "../formatPresets";
 import { useConversionPolling } from "../hooks/useConversionPolling";
 import { useTaskPolling } from "../hooks/useTaskPolling";
-import type { RecentJob } from "../recentJobs";
+import { isExpiredRecentJobError, type RecentJob } from "../recentJobs";
 import type { FormatPreset } from "../types";
 import { ConversionProgress } from "./ConversionProgress";
 import { FormatSelector } from "./FormatSelector";
@@ -90,6 +90,15 @@ export function JobCard({
   const currentConversionMatchesSelection =
     !job.conversionPreset ||
     presetsMatch(job.conversionPreset, activeSelectedPreset);
+
+  useEffect(() => {
+    if (
+      isExpiredRecentJobError(taskError) ||
+      isExpiredRecentJobError(conversionError)
+    ) {
+      onRemove(job.taskId);
+    }
+  }, [conversionError, job.taskId, onRemove, taskError]);
 
   useEffect(() => {
     if (!outputPresets) {
