@@ -6,6 +6,10 @@ export const RECENT_JOBS_STORAGE_KEY = "yt-downloader:recent-jobs";
 const AUDIO_FORMATS = new Set(["mp3", "wav", "flac", "aac", "ogg", "m4a"]);
 const VIDEO_FORMATS = new Set(["mp4", "webm", "mkv", "avi", "mov"]);
 const VIDEO_QUALITIES = new Set(["1080p", "720p", "480p"]);
+const EXPIRED_RECENT_JOB_ERRORS = new Set([
+  "Task not found",
+  "Conversion not found",
+]);
 
 export type RecentJob = {
   taskId: string;
@@ -132,6 +136,10 @@ export function removeRecentJob(
   taskId: string,
 ): RecentJob[] {
   return jobs.filter((job) => job.taskId !== taskId);
+}
+
+export function isExpiredRecentJobError(error: string | null): boolean {
+  return error !== null && EXPIRED_RECENT_JOB_ERRORS.has(error);
 }
 
 export function hydrateRecentJobs(serialized: string | null): RecentJob[] {
