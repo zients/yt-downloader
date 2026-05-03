@@ -55,13 +55,29 @@ function testAddRecentJobDeduplicatesTaskId() {
 }
 
 function testUpdateRecentJobConversionChangesOneCard() {
-  const jobs = updateRecentJobConversion(baseJobs, "task-3", "conversion-3", 11);
+  const jobs = updateRecentJobConversion(
+    baseJobs,
+    "task-3",
+    "conversion-3",
+    { format: "mp4", quality: "720p" },
+    11,
+  );
 
   assertEqual(jobs.length, baseJobs.length, "keeps the same number of jobs");
   assertEqual(
     jobs[2]?.conversionId,
     "conversion-3",
     "stores conversion on the matching task",
+  );
+  assertEqual(
+    jobs[2]?.conversionPreset?.format,
+    "mp4",
+    "stores conversion format on the matching task",
+  );
+  assertEqual(
+    jobs[2]?.conversionPreset?.quality,
+    "720p",
+    "stores conversion quality on the matching task",
   );
   assertEqual(jobs[2]?.updatedAt, 11, "updates the matching task timestamp");
   assertEqual(
@@ -84,6 +100,7 @@ function testUpdateRecentJobConversionClearsStaleAutoDownloadMarker() {
     ],
     "task-1",
     "new-conversion",
+    { format: "mp3" },
     12,
   );
 
@@ -96,7 +113,15 @@ function testUpdateRecentJobConversionClearsStaleAutoDownloadMarker() {
 
 function testMarkRecentJobAutoDownloadedStoresConversionId() {
   const jobs = markRecentJobAutoDownloaded(
-    [{ taskId: "task-1", conversionId: "conversion-1", createdAt: 1, updatedAt: 1 }],
+    [
+      {
+        taskId: "task-1",
+        conversionId: "conversion-1",
+        conversionPreset: { format: "mp4", quality: "720p" },
+        createdAt: 1,
+        updatedAt: 1,
+      },
+    ],
     "task-1",
     "conversion-1",
     13,
@@ -107,6 +132,11 @@ function testMarkRecentJobAutoDownloadedStoresConversionId() {
     "conversion-1",
     "stores the auto-downloaded conversion id",
   );
+  assertEqual(
+    jobs[0]?.conversionPreset?.format,
+    "mp4",
+    "keeps conversion format when marking auto-download",
+  );
   assertEqual(jobs[0]?.updatedAt, 13, "updates the matching task timestamp");
 }
 
@@ -115,6 +145,7 @@ function testHydrateRecentJobsFiltersInvalidAndLimits() {
     {
       taskId: "valid-1",
       conversionId: "conversion-1",
+      conversionPreset: { format: "mp4", quality: "720p" },
       autoDownloadedConversionId: "conversion-1",
       createdAt: 20,
       updatedAt: 21,
@@ -122,9 +153,23 @@ function testHydrateRecentJobsFiltersInvalidAndLimits() {
     {
       taskId: "stale-marker",
       conversionId: "conversion-2",
+      conversionPreset: { format: "mp3" },
       autoDownloadedConversionId: "other-conversion",
       createdAt: 19,
       updatedAt: 19,
+    },
+    {
+      taskId: "legacy-conversion",
+      conversionId: "legacy-conversion-1",
+      createdAt: 18,
+      updatedAt: 18,
+    },
+    {
+      taskId: "invalid-preset",
+      conversionId: "invalid-conversion-1",
+      conversionPreset: { format: "mp4" },
+      createdAt: 17,
+      updatedAt: 17,
     },
     { taskId: "", createdAt: 18, updatedAt: 18 },
     { taskId: "valid-2", conversionId: 12, createdAt: "bad", updatedAt: 18 },
@@ -144,6 +189,16 @@ function testHydrateRecentJobsFiltersInvalidAndLimits() {
     "keeps valid conversion id",
   );
   assertEqual(
+    jobs[0]?.conversionPreset?.format,
+    "mp4",
+    "keeps valid conversion format",
+  );
+  assertEqual(
+    jobs[0]?.conversionPreset?.quality,
+    "720p",
+    "keeps valid conversion quality",
+  );
+  assertEqual(
     jobs[0]?.autoDownloadedConversionId,
     "conversion-1",
     "keeps matching auto-download marker",
@@ -153,8 +208,18 @@ function testHydrateRecentJobsFiltersInvalidAndLimits() {
     undefined,
     "drops stale auto-download marker",
   );
-  assertEqual(jobs[2]?.taskId, "valid-2", "recovers invalid timestamps");
-  assertEqual(jobs[2]?.conversionId, undefined, "drops invalid conversion id");
+  assertEqual(
+    jobs[2]?.conversionId,
+    undefined,
+    "drops legacy conversion id without a stored preset",
+  );
+  assertEqual(
+    jobs[3]?.conversionId,
+    undefined,
+    "drops conversion id with an invalid stored preset",
+  );
+  assertEqual(jobs[4]?.taskId, "valid-2", "recovers invalid timestamps");
+  assertEqual(jobs[4]?.conversionId, undefined, "drops invalid conversion id");
   assert(jobs.every((job) => job.taskId !== ""), "filters empty task ids");
 }
 
