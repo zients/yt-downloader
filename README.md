@@ -302,7 +302,3 @@ rm -rf ./downloads
 This app can consume network bandwidth, CPU, and disk space. Run it on a trusted
 machine or trusted LAN where users are allowed to create download and conversion
 jobs.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
