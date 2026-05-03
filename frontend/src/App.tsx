@@ -1,67 +1,64 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
-import { createConversion, createTask } from "./api/client";
-import { ConversionProgress } from "./components/ConversionProgress";
-import { FormatSelector } from "./components/FormatSelector";
-import { TaskProgress } from "./components/TaskProgress";
+import { createTask } from "./api/client";
+import { JobCard } from "./components/JobCard";
 import { UrlInput } from "./components/UrlInput";
-import { useConversionPolling } from "./hooks/useConversionPolling";
-import { useTaskPolling } from "./hooks/useTaskPolling";
-import type { FormatPreset } from "./types";
+import {
+  addRecentJob,
+  hydrateRecentJobs,
+  markRecentJobAutoDownloaded,
+  RECENT_JOBS_STORAGE_KEY,
+  removeRecentJob,
+  serializeRecentJobs,
+  updateRecentJobConversion,
+  type RecentJob,
+} from "./recentJobs";
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
 }
 
+function readStoredJobs(): RecentJob[] {
+  try {
+    return hydrateRecentJobs(
+      window.localStorage.getItem(RECENT_JOBS_STORAGE_KEY),
+    );
+  } catch {
+    return [];
+  }
+}
+
+function writeStoredJobs(jobs: RecentJob[]) {
+  try {
+    window.localStorage.setItem(
+      RECENT_JOBS_STORAGE_KEY,
+      serializeRecentJobs(jobs),
+    );
+  } catch {
+    // Ignore storage failures so the downloader remains usable.
+  }
+}
+
 function App() {
-  const [taskId, setTaskId] = useState<string | null>(null);
-  const [conversionId, setConversionId] = useState<string | null>(null);
+  const [jobs, setJobs] = useState<RecentJob[]>(readStoredJobs);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isCreatingConversion, setIsCreatingConversion] = useState(false);
-  const { task, error: taskError } = useTaskPolling(taskId);
-  const { conversion, error: conversionError } =
-    useConversionPolling(conversionId);
 
-  const currentTask = task?.task_id === taskId ? task : null;
-  const currentConversion =
-    conversion?.conversion_id === conversionId ? conversion : null;
-  const isAwaitingTaskStatus = Boolean(taskId) && !currentTask;
-  const isAwaitingConversionStatus = Boolean(conversionId) && !currentConversion;
-  const isSourceProcessing =
-    isSubmitting ||
-    isAwaitingTaskStatus ||
-    currentTask?.status === "source_pending" ||
-    currentTask?.status === "source_processing";
-  const conversionProcessing =
-    isCreatingConversion ||
-    isAwaitingConversionStatus ||
-    currentConversion?.status === "conversion_pending" ||
-    currentConversion?.status === "conversion_processing";
-  const isSourceReady = currentTask?.status === "source_ready";
-  const isAppBusy = isSourceProcessing || conversionProcessing;
-  const visibleError =
-    submitError ??
-    taskError ??
-    conversionError ??
-    currentTask?.error ??
-    currentConversion?.error ??
-    null;
+  useEffect(() => {
+    writeStoredJobs(jobs);
+  }, [jobs]);
 
   async function handleUrlSubmit(url: string) {
-    if (isAppBusy) {
+    if (isSubmitting) {
       return;
     }
 
-    setTaskId(null);
-    setConversionId(null);
     setSubmitError(null);
-    setIsCreatingConversion(false);
     setIsSubmitting(true);
 
     try {
       const createdTask = await createTask(url);
-      setTaskId(createdTask.task_id);
+      setJobs((currentJobs) => addRecentJob(currentJobs, createdTask.task_id));
     } catch (error) {
       setSubmitError(getErrorMessage(error, "Failed to submit URL"));
     } finally {
@@ -69,39 +66,26 @@ function App() {
     }
   }
 
-  async function handlePresetSelect(preset: FormatPreset) {
-    if (
-      !currentTask ||
-      currentTask.status !== "source_ready" ||
-      conversionProcessing
-    ) {
-      return;
-    }
-
-    setConversionId(null);
-    setSubmitError(null);
-    setIsCreatingConversion(true);
-
-    try {
-      const createdConversion = await createConversion(
-        currentTask.task_id,
-        preset.format,
-        preset.quality ?? null,
-      );
-      setConversionId(createdConversion.conversion_id);
-    } catch (error) {
-      setSubmitError(getErrorMessage(error, "Failed to create conversion"));
-    } finally {
-      setIsCreatingConversion(false);
-    }
+  function handleConversionCreated(taskId: string, conversionId: string) {
+    setJobs((currentJobs) =>
+      updateRecentJobConversion(currentJobs, taskId, conversionId),
+    );
   }
 
-  function handleReset() {
-    setTaskId(null);
-    setConversionId(null);
-    setSubmitError(null);
-    setIsSubmitting(false);
-    setIsCreatingConversion(false);
+  function handleConversionAutoDownloaded(taskId: string, conversionId: string) {
+    setJobs((currentJobs) => {
+      const nextJobs = markRecentJobAutoDownloaded(
+        currentJobs,
+        taskId,
+        conversionId,
+      );
+      writeStoredJobs(nextJobs);
+      return nextJobs;
+    });
+  }
+
+  function handleRemoveJob(taskId: string) {
+    setJobs((currentJobs) => removeRecentJob(currentJobs, taskId));
   }
 
   return (
@@ -111,45 +95,29 @@ function App() {
           <h1>YT Downloader</h1>
         </header>
 
-        <UrlInput disabled={isAppBusy} onSubmit={handleUrlSubmit} />
+        <UrlInput disabled={isSubmitting} onSubmit={handleUrlSubmit} />
 
-        {visibleError ? (
+        {submitError ? (
           <section className="error-banner" role="alert">
-            <span>{visibleError}</span>
-            <button onClick={handleReset} type="button">
-              Reset
+            <span>{submitError}</span>
+            <button onClick={() => setSubmitError(null)} type="button">
+              Dismiss
             </button>
           </section>
         ) : null}
 
-        {currentTask &&
-          currentTask.status !== "source_ready" &&
-          currentTask.status !== "failed" ? (
-          <TaskProgress task={currentTask} />
-        ) : null}
-
-        {isSourceReady ? (
-          <section className="panel ready-panel">
-            <h2>{currentTask.title ?? "Video ready"}</h2>
-            {currentTask.thumbnail ? (
-              <img
-                className="thumbnail"
-                src={currentTask.thumbnail}
-                alt={currentTask.title ?? "Video thumbnail"}
+        {jobs.length > 0 ? (
+          <section className="jobs-list" aria-label="Recent downloads">
+            {jobs.map((job) => (
+              <JobCard
+                job={job}
+                key={job.taskId}
+                onConversionAutoDownloaded={handleConversionAutoDownloaded}
+                onConversionCreated={handleConversionCreated}
+                onRemove={handleRemoveJob}
               />
-            ) : null}
-            {currentTask.output_presets ? (
-              <FormatSelector
-                disabled={conversionProcessing}
-                onSelect={handlePresetSelect}
-                presets={currentTask.output_presets}
-              />
-            ) : null}
+            ))}
           </section>
-        ) : null}
-
-        {currentConversion ? (
-          <ConversionProgress conversion={currentConversion} />
         ) : null}
       </main>
     </div>

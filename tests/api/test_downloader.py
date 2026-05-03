@@ -1,3 +1,4 @@
+import asyncio
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -233,6 +234,99 @@ async def test_download_video_sets_source_ready(fake_redis, tmp_download_dir: Pa
     assert data["progress"] == "100"
     assert "output_presets" in data
     assert options["outtmpl"] == str(task_dir / f"{task_id}.%(ext)s")
+
+
+@pytest.mark.asyncio
+async def test_download_video_reports_source_download_progress(
+    fake_redis,
+    tmp_download_dir: Path,
+) -> None:
+    task_id = "task-progress"
+    task_dir = tmp_download_dir / task_id
+    source_file = task_dir / "source.webm"
+    loop = asyncio.get_running_loop()
+    progress_snapshots: list[dict[str, str]] = []
+
+    ydl_instance = MagicMock()
+
+    def extract_info(url: str, download: bool) -> dict:
+        options = ydl_cls.call_args.args[0]
+        hook = options["progress_hooks"][0]
+        hook(
+            {
+                "status": "downloading",
+                "downloaded_bytes": 250,
+                "total_bytes": 1000,
+            }
+        )
+        progress_snapshots.append(
+            asyncio.run_coroutine_threadsafe(
+                fake_redis.hgetall(f"task:{task_id}"),
+                loop,
+            ).result(timeout=1)
+        )
+        return {
+            "title": "Progress Video",
+            "requested_downloads": [{"filepath": str(source_file)}],
+        }
+
+    ydl_instance.extract_info.side_effect = extract_info
+
+    with patch("yt_downloader.services.downloader.yt_dlp.YoutubeDL") as ydl_cls:
+        ydl_cls.return_value.__enter__.return_value = ydl_instance
+        ydl_cls.return_value.__exit__.return_value = False
+        await download_video(task_id, "https://youtu.be/progress", fake_redis, tmp_download_dir)
+
+    options = ydl_cls.call_args.args[0]
+    data = await fake_redis.hgetall(f"task:{task_id}")
+    assert "progress_hooks" in options
+    assert len(options["progress_hooks"]) == 1
+    assert progress_snapshots == [
+        {
+            "status": "source_processing",
+            "progress": "25",
+        }
+    ]
+    assert data["status"] == "source_ready"
+    assert data["source_filename"] == f"{task_id}.webm"
+    assert data["progress"] == "100"
+
+
+@pytest.mark.asyncio
+async def test_download_video_ignores_progress_without_usable_total_bytes(
+    fake_redis,
+    tmp_download_dir: Path,
+) -> None:
+    task_id = "task-progress-no-total"
+    task_dir = tmp_download_dir / task_id
+    source_file = task_dir / "source.mp4"
+
+    ydl_instance = MagicMock()
+
+    def extract_info(url: str, download: bool) -> dict:
+        options = ydl_cls.call_args.args[0]
+        options["progress_hooks"][0](
+            {
+                "status": "downloading",
+                "downloaded_bytes": 250,
+            }
+        )
+        return {
+            "title": "No Total Video",
+            "requested_downloads": [{"filepath": str(source_file)}],
+        }
+
+    ydl_instance.extract_info.side_effect = extract_info
+
+    with patch("yt_downloader.services.downloader.yt_dlp.YoutubeDL") as ydl_cls:
+        ydl_cls.return_value.__enter__.return_value = ydl_instance
+        ydl_cls.return_value.__exit__.return_value = False
+        await download_video(task_id, "https://youtu.be/no-total", fake_redis, tmp_download_dir)
+
+    data = await fake_redis.hgetall(f"task:{task_id}")
+    assert data["status"] == "source_ready"
+    assert data["source_filename"] == f"{task_id}.mp4"
+    assert data["progress"] == "100"
 
 
 @pytest.mark.asyncio

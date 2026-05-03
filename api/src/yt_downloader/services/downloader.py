@@ -1,5 +1,6 @@
 import asyncio
 import json
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -34,13 +35,50 @@ def _source_filename(info: dict[str, Any], task_id: str) -> str:
     return f"{task_id}.mp4"
 
 
-def _download(url: str, task_dir: Path, task_id: str) -> dict[str, Any]:
+def _progress_percent(progress: dict[str, Any]) -> int | None:
+    downloaded_bytes = progress.get("downloaded_bytes")
+    total_bytes = progress.get("total_bytes") or progress.get("total_bytes_estimate")
+
+    try:
+        downloaded = float(downloaded_bytes)
+        total = float(total_bytes)
+    except (TypeError, ValueError):
+        return None
+
+    if downloaded < 0 or total <= 0:
+        return None
+
+    return min(99, max(0, int((downloaded / total) * 100)))
+
+
+def _download(
+    url: str,
+    task_dir: Path,
+    task_id: str,
+    progress_callback: Callable[[int], None] | None = None,
+) -> dict[str, Any]:
     task_dir.mkdir(parents=True, exist_ok=True)
+    last_progress = 0
+
+    def progress_hook(progress: dict[str, Any]) -> None:
+        nonlocal last_progress
+
+        if progress.get("status") != "downloading" or progress_callback is None:
+            return
+
+        percent = _progress_percent(progress)
+        if percent is None or percent == last_progress:
+            return
+
+        progress_callback(percent)
+        last_progress = percent
+
     options = {
         "format": "bestvideo+bestaudio/best",
         "merge_output_format": "mp4",
         "noplaylist": True,
         "outtmpl": str(task_dir / f"{task_id}.%(ext)s"),
+        "progress_hooks": [progress_hook],
         "quiet": True,
     }
     with yt_dlp.YoutubeDL(options) as ydl:
@@ -54,6 +92,22 @@ async def download_video(
     download_dir: Path,
 ) -> None:
     task_key = f"task:{task_id}"
+    loop = asyncio.get_running_loop()
+
+    def persist_source_progress(progress: int) -> None:
+        future = asyncio.run_coroutine_threadsafe(
+            write_hash_state(
+                redis_client,
+                task_key,
+                {
+                    "status": "source_processing",
+                    "progress": progress,
+                },
+                _ttl_seconds(),
+            ),
+            loop,
+        )
+        future.result()
 
     try:
         await write_hash_state(
@@ -66,7 +120,13 @@ async def download_video(
             _ttl_seconds(),
         )
         task_dir = safe_path_under(download_dir, task_id)
-        info = await asyncio.to_thread(_download, url, task_dir, task_id)
+        info = await asyncio.to_thread(
+            _download,
+            url,
+            task_dir,
+            task_id,
+            persist_source_progress,
+        )
         await write_hash_state(
             redis_client,
             task_key,

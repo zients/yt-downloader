@@ -10,7 +10,7 @@ export function TaskProgress({ task }: TaskProgressProps) {
   const progress = task.progress ?? 0;
 
   return (
-    <section className="panel task-progress" aria-live="polite">
+    <section className="task-progress" aria-live="polite">
       {task.thumbnail ? (
         <img
           className="thumbnail"
