@@ -1,4 +1,5 @@
 from pathlib import Path
+from urllib.parse import unquote
 from unittest.mock import AsyncMock, patch
 
 import pytest
@@ -371,6 +372,67 @@ async def test_download_ready_conversion(
 
     assert response.status_code == 200
     assert response.content == b"fake audio"
+
+
+@pytest.mark.asyncio
+async def test_download_uses_task_title_as_attachment_filename(
+    async_client,
+    fake_redis,
+    tmp_download_dir: Path,
+) -> None:
+    task_id = "task-1"
+    conversion_id = "conv-1"
+    output_dir = tmp_download_dir / task_id / "outputs" / conversion_id
+    output_dir.mkdir(parents=True)
+    output_file = output_dir / f"{task_id}.mp3"
+    output_file.write_bytes(b"fake audio")
+    await fake_redis.hset(
+        f"task:{task_id}",
+        mapping={"title": 'A/B: "Cool" Video?'},
+    )
+    await fake_redis.hset(
+        f"conversion:{conversion_id}",
+        mapping={
+            "status": "conversion_ready",
+            "task_id": task_id,
+            "output_filename": f"{task_id}.mp3",
+        },
+    )
+
+    response = await async_client.get(f"/api/conversions/{conversion_id}/download")
+
+    assert response.status_code == 200
+    content_disposition = unquote(response.headers["content-disposition"])
+    assert f"{task_id}.mp3" not in content_disposition
+    assert "A_B_ Cool Video.mp3" in content_disposition
+    assert (output_dir / f"{task_id}.mp3").is_file()
+
+
+@pytest.mark.asyncio
+async def test_download_filename_falls_back_to_output_filename_without_title(
+    async_client,
+    fake_redis,
+    tmp_download_dir: Path,
+) -> None:
+    task_id = "task-1"
+    conversion_id = "conv-1"
+    output_dir = tmp_download_dir / task_id / "outputs" / conversion_id
+    output_dir.mkdir(parents=True)
+    output_file = output_dir / f"{task_id}.mp3"
+    output_file.write_bytes(b"fake audio")
+    await fake_redis.hset(
+        f"conversion:{conversion_id}",
+        mapping={
+            "status": "conversion_ready",
+            "task_id": task_id,
+            "output_filename": f"{task_id}.mp3",
+        },
+    )
+
+    response = await async_client.get(f"/api/conversions/{conversion_id}/download")
+
+    assert response.status_code == 200
+    assert f'{task_id}.mp3' in response.headers["content-disposition"]
 
 
 @pytest.mark.asyncio
