@@ -27,6 +27,19 @@ CONVERSION_STATUSES = {
     "conversion_ready",
     "failed",
 }
+DOWNLOAD_FILENAME_REPLACEMENTS = str.maketrans(
+    {
+        "/": "_",
+        "\\": "_",
+        ":": "_",
+        "*": "_",
+        "?": "_",
+        '"': "",
+        "<": "_",
+        ">": "_",
+        "|": "_",
+    }
+)
 
 
 def _ttl_seconds() -> int:
@@ -123,6 +136,19 @@ def _simple_state_identifier(identifier: str) -> str:
     if not _is_simple_path_component(identifier):
         raise _invalid_conversion_state()
     return identifier
+
+
+def _download_filename_from_title(title: str | None, output_filename: str) -> str:
+    extension = Path(output_filename).suffix
+    if not title:
+        return output_filename
+
+    sanitized_title = " ".join(title.translate(DOWNLOAD_FILENAME_REPLACEMENTS).split())
+    sanitized_title = sanitized_title.strip(" ._")
+    if not sanitized_title:
+        return output_filename
+
+    return f"{sanitized_title}{extension}"
 
 
 @router.post(
@@ -246,4 +272,10 @@ async def download_conversion(conversion_id: str, request: Request) -> FileRespo
             detail="Output file not found",
         )
 
-    return FileResponse(output_path, filename=output_path.name)
+    task_data = await redis_client.hgetall(f"task:{task_id}")
+    download_filename = _download_filename_from_title(
+        task_data.get("title") if task_data else None,
+        output_path.name,
+    )
+
+    return FileResponse(output_path, filename=download_filename)
