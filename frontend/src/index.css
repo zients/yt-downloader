@@ -73,7 +73,8 @@ input {
 }
 
 .url-input button,
-.error-banner button {
+.error-banner button,
+.job-card-header button {
   padding: 0 18px;
   min-height: 48px;
   color: #ffffff;
@@ -89,6 +90,73 @@ input {
   opacity: 0.55;
 }
 
+.jobs-list {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.job-card {
+  padding: 18px;
+  background: #191920;
+  border: 1px solid #2f2f39;
+  border-radius: 8px;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.job-card-header {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.job-card-header h2 {
+  margin: 0 0 6px;
+  font-size: 1.15rem;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.job-card-header p {
+  margin: 0;
+  color: #b8b8c3;
+  font-size: 0.9rem;
+}
+
+.job-card-header button {
+  min-height: 40px;
+  padding: 0 14px;
+  background: #2d2d37;
+}
+
+.job-card-header button:hover {
+  background: #3a3a46;
+}
+
+.job-card .conversion,
+.job-card .task-progress,
+.job-card .ready-panel,
+.job-card-error,
+.job-card-status {
+  margin-top: 14px;
+}
+
+.job-card-error,
+.job-card-status {
+  padding: 14px;
+  background: #202029;
+  border: 1px solid #373745;
+  border-radius: 8px;
+  color: #b8b8c3;
+}
+
+.job-card-error {
+  color: #ffb4aa;
+  border-color: rgba(255, 111, 97, 0.35);
+}
+
 .panel,
 .error-banner {
   margin-top: 16px;
@@ -98,6 +166,11 @@ input {
   border-radius: 8px;
   min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.task-progress,
+.conversion {
+  min-width: 0;
 }
 
 .error-banner {
@@ -233,8 +306,13 @@ input {
   }
 
   .conversion.ready,
+  .job-card-header,
   .error-banner {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .job-card-header button {
+    width: 100%;
   }
 }

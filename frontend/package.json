@@ -7,6 +7,7 @@
     "dev": "vite",
     "build": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.node.json --noEmit && vite build",
     "lint": "tsc -p tsconfig.app.json --noEmit --pretty false && tsc -p tsconfig.node.json --noEmit --pretty false",
+    "test:recent-jobs": "rm -rf /tmp/yt-downloader-recent-jobs-test && tsc --module CommonJS --moduleResolution Node --target ES2020 --strict --skipLibCheck --outDir /tmp/yt-downloader-recent-jobs-test src/recentJobs.ts tests/recentJobs.test.ts && node /tmp/yt-downloader-recent-jobs-test/tests/recentJobs.test.js",
     "preview": "vite preview"
   },
   "dependencies": {
