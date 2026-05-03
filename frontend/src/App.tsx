@@ -13,6 +13,7 @@ import {
   updateRecentJobConversion,
   type RecentJob,
 } from "./recentJobs";
+import type { FormatPreset } from "./types";
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -66,9 +67,18 @@ function App() {
     }
   }
 
-  function handleConversionCreated(taskId: string, conversionId: string) {
+  function handleConversionCreated(
+    taskId: string,
+    conversionId: string,
+    conversionPreset: FormatPreset,
+  ) {
     setJobs((currentJobs) =>
-      updateRecentJobConversion(currentJobs, taskId, conversionId),
+      updateRecentJobConversion(
+        currentJobs,
+        taskId,
+        conversionId,
+        conversionPreset,
+      ),
     );
   }
 

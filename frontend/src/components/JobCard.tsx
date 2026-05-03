@@ -5,6 +5,7 @@ import {
   findMatchingPreset,
   flattenAvailablePresets,
   getDefaultFormatPreset,
+  presetsMatch,
 } from "../formatPresets";
 import { useConversionPolling } from "../hooks/useConversionPolling";
 import { useTaskPolling } from "../hooks/useTaskPolling";
@@ -17,7 +18,11 @@ import { TaskProgress } from "./TaskProgress";
 type JobCardProps = {
   job: RecentJob;
   onConversionAutoDownloaded: (taskId: string, conversionId: string) => void;
-  onConversionCreated: (taskId: string, conversionId: string) => void;
+  onConversionCreated: (
+    taskId: string,
+    conversionId: string,
+    conversionPreset: FormatPreset,
+  ) => void;
   onRemove: (taskId: string) => void;
 };
 
@@ -43,7 +48,7 @@ export function JobCard({
   >(null);
   const [isCreatingConversion, setIsCreatingConversion] = useState(false);
   const [selectedPreset, setSelectedPreset] = useState<FormatPreset | null>(
-    null,
+    job.conversionPreset ?? null,
   );
   const { task, error: taskError } = useTaskPolling(job.taskId);
   const { conversion, error: conversionError } = useConversionPolling(
@@ -82,10 +87,12 @@ export function JobCard({
   );
   const activeSelectedPreset =
     selectedAvailablePreset ?? getDefaultFormatPreset(outputPresets);
+  const currentConversionMatchesSelection =
+    !job.conversionPreset ||
+    presetsMatch(job.conversionPreset, activeSelectedPreset);
 
   useEffect(() => {
     if (!outputPresets) {
-      setSelectedPreset(null);
       return;
     }
 
@@ -122,7 +129,11 @@ export function JobCard({
         activeSelectedPreset.format,
         activeSelectedPreset.quality ?? null,
       );
-      onConversionCreated(currentTask.task_id, createdConversion.conversion_id);
+      onConversionCreated(
+        currentTask.task_id,
+        createdConversion.conversion_id,
+        activeSelectedPreset,
+      );
     } catch (error) {
       setConversionCreateError(
         getErrorMessage(error, "Failed to create conversion"),
@@ -196,7 +207,7 @@ export function JobCard({
         </section>
       ) : null}
 
-      {currentConversion ? (
+      {currentConversion && currentConversionMatchesSelection ? (
         <ConversionProgress
           autoDownload={!autoDownloadedCurrentConversion}
           conversion={currentConversion}
