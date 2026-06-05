@@ -1,9 +1,33 @@
 # YouTube Downloader
 
-Dockerized YouTube downloader for personal or trusted-LAN use.
+[CI](https://github.com/zients/yt-downloader/actions/workflows/ci.yml) |
+[MIT License](LICENSE) |
+[Contributing](CONTRIBUTING.md) |
+[Security](SECURITY.md)
 
-This project is intended for developers who want to self-host a small downloader
-tool on their own machine or trusted home network.
+Self-hosted Docker Compose web app for downloading YouTube sources and
+converting them on a trusted machine or LAN.
+
+This project is intended for developers who want a small downloader tool they
+can run on their own machine or trusted home network. It is not designed to be a
+public internet-facing downloader service.
+
+## Project Status
+
+This project is usable for personal self-hosting and trusted-LAN deployments.
+The default setup prioritizes simple local operation over multi-user public
+hosting. Releases before `1.0.0` may change configuration, APIs, or runtime
+behavior as the project evolves.
+
+## Responsible Use
+
+Operators are responsible for how this tool is deployed and used. Run it only
+where users are trusted, and make sure your usage follows applicable laws,
+copyright rules, and platform terms of service.
+
+Do not expose the default Docker Compose stack directly to the public internet.
+If you need remote access, add your own authentication, authorization, rate
+limiting, TLS termination, monitoring, and resource controls first.
 
 ## Features
 
@@ -15,6 +39,17 @@ tool on their own machine or trusted home network.
 - Source and conversion progress reporting.
 - ffmpeg-based conversion with MP3-first default format selection.
 - Automatic cleanup for expired files under `/app/downloads`.
+
+## Known Limitations
+
+- No built-in authentication or user management.
+- No built-in rate limiting or public abuse protection.
+- Redis state is in-memory by default, so task state is lost when the Redis
+  container is restarted.
+- Downloads and conversions can consume significant bandwidth, CPU, and disk
+  space.
+- yt-dlp behavior can change when upstream platforms change access rules,
+  formats, or restrictions.
 
 ## Architecture
 
@@ -57,7 +92,7 @@ For local development:
 Clone the repository and start the stack:
 
 ```bash
-git clone git@github.com:zients/yt-downloader.git
+git clone https://github.com/zients/yt-downloader.git
 cd yt-downloader
 docker compose up --build
 ```
@@ -301,4 +336,11 @@ rm -rf ./downloads
 
 This app can consume network bandwidth, CPU, and disk space. Run it on a trusted
 machine or trusted LAN where users are allowed to create download and conversion
-jobs.
+jobs. See [SECURITY.md](SECURITY.md) for the security policy and vulnerability
+reporting guidance.
+
+## Contributing
+
+Contributions are welcome when they keep the project focused on personal
+self-hosting and trusted-LAN use. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+development setup, verification commands, and pull request guidelines.
