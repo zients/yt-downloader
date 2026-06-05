@@ -1,9 +1,8 @@
 # YouTube Downloader
 
-[CI](https://github.com/zients/yt-downloader/actions/workflows/ci.yml) |
-[MIT License](LICENSE) |
-[Contributing](CONTRIBUTING.md) |
-[Security](SECURITY.md)
+[![CI](https://github.com/zients/yt-downloader/actions/workflows/ci.yml/badge.svg)](https://github.com/zients/yt-downloader/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Python 3.14+](https://img.shields.io/badge/python-3.14%2B-blue.svg)](api/pyproject.toml)
 
 Self-hosted Docker Compose web app for downloading YouTube sources and
 converting them on a trusted machine or LAN.
@@ -16,8 +15,8 @@ public internet-facing downloader service.
 
 This project is usable for personal self-hosting and trusted-LAN deployments.
 The default setup prioritizes simple local operation over multi-user public
-hosting. Releases before `1.0.0` may change configuration, APIs, or runtime
-behavior as the project evolves.
+hosting. Version `1.x` releases aim to keep the default Docker Compose workflow
+stable while the project continues to evolve.
 
 ## Responsible Use
 
