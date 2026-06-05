@@ -35,6 +35,12 @@ jobs:
       - name: Install frontend dependencies
         run: npm ci
 
+      - name: Test frontend format presets
+        run: npm run test:format-presets
+
+      - name: Test frontend recent jobs
+        run: npm run test:recent-jobs
+
       - name: Lint frontend
         run: npm run lint
 
