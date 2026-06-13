@@ -334,6 +334,57 @@ class FakePopenForCallbackFailure:
         self.returncode = -9
 
 
+class RaisingStream:
+    def __iter__(self):
+        raise RuntimeError("stream failed")
+
+
+class AlreadyFinishedProcess:
+    def __init__(self) -> None:
+        self.terminated = False
+
+    def poll(self):
+        return 0
+
+    def terminate(self) -> None:
+        self.terminated = True
+
+
+class HangingProcess:
+    def __init__(self) -> None:
+        self.terminated = False
+        self.killed = False
+        self.wait_calls = 0
+
+    def poll(self):
+        return None
+
+    def terminate(self) -> None:
+        self.terminated = True
+
+    def wait(self, timeout: float | None = None):
+        self.wait_calls += 1
+        if timeout is not None:
+            raise converter.subprocess.TimeoutExpired("ffmpeg", timeout)
+        return -9
+
+    def kill(self) -> None:
+        self.killed = True
+
+
+class FakePopenForMalformedProgressAndFailure:
+    def __init__(self, *args, **kwargs) -> None:
+        self.stdout = FakeStdout(["not-a-progress-field\n"])
+        self.stderr = FakeStdout(["ffmpeg failed\n"])
+        self.returncode = 1
+
+    def poll(self):
+        return self.returncode
+
+    def wait(self, timeout: float | None = None):
+        return self.returncode
+
+
 def test_build_ffmpeg_args_for_mp3(tmp_path: Path) -> None:
     source = tmp_path / "source.mp4"
     output = tmp_path / "source.mp3"
@@ -372,6 +423,11 @@ def test_probe_duration_falls_back_when_ffprobe_cannot_start(
     assert converter._probe_duration(tmp_path / "source.mp4") is None
 
 
+@pytest.mark.parametrize("value", ["bad", "aa:00:00"])
+def test_parse_ffmpeg_time_rejects_invalid_values(value: str) -> None:
+    assert converter._parse_ffmpeg_time(value) is None
+
+
 @pytest.mark.parametrize(
     ("fields", "expected"),
     [
@@ -391,6 +447,60 @@ def test_calculate_ffmpeg_progress_from_supported_fields(
 
 def test_calculate_ffmpeg_progress_returns_none_without_duration() -> None:
     assert converter._progress_percent_from_ffmpeg_fields({"out_time_ms": "1"}, None) is None
+
+
+@pytest.mark.parametrize(
+    "fields",
+    [
+        {"out_time_ms": "not-a-number"},
+        {"progress": "continue"},
+    ],
+)
+def test_calculate_ffmpeg_progress_returns_none_without_elapsed_time(
+    fields: dict[str, str],
+) -> None:
+    assert converter._progress_percent_from_ffmpeg_fields(fields, 10.0) is None
+
+
+def test_drain_process_stream_records_stream_errors() -> None:
+    lines: list[str] = []
+
+    converter._drain_process_stream(RaisingStream(), lines)
+
+    assert lines == ["stream failed"]
+
+
+def test_terminate_process_ignores_already_finished_process() -> None:
+    process = AlreadyFinishedProcess()
+
+    converter._terminate_process(process)
+
+    assert not process.terminated
+
+
+def test_terminate_process_kills_after_timeout() -> None:
+    process = HangingProcess()
+
+    converter._terminate_process(process)
+
+    assert process.terminated
+    assert process.killed
+    assert process.wait_calls == 2
+
+
+def test_run_ffmpeg_raises_stderr_message_on_failure(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    source = tmp_path / "source.mp4"
+    source.write_text("fake video")
+    output = tmp_path / "source.mp3"
+
+    monkeypatch.setattr(converter, "_probe_duration", lambda source_path: 10.0)
+    monkeypatch.setattr(converter.subprocess, "Popen", FakePopenForMalformedProgressAndFailure)
+
+    with pytest.raises(RuntimeError, match="ffmpeg failed"):
+        converter._run_ffmpeg(source, output, "mp3", None)
 
 
 def test_run_ffmpeg_drains_stderr_while_reading_progress(
